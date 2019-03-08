@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+	<!-- Example for logging into the build folder of your project -->
+	<property name="BASE_FILE"
+		value="/var/log/tomcat/demoGateway/demoGateway" />
+		<property name="springAppName"
+		value="apiServer" />
+	​
+	<property name="LOG_FILE" value="${BASE_FILE}.log" />
+	​
+	<property name="JSON_FILE" value="${BASE_FILE}.json" />
+	​
+
+	<!-- You can override this to have a custom pattern -->
+	<property name="CONSOLE_LOG_PATTERN"
+		value="%d{yyyy-MM-dd HH:mm:ss.SSS} ${springAppName:-} [%thread] %-5level %logger{36} - %msg%n" />
+	​
+	
+	
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+			<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+				<!-- Minimum logging level to be presented in the console logs -->
+				<level>INFO</level>
+			</filter>
+			<encoder>
+				<pattern>${CONSOLE_LOG_PATTERN}</pattern>
+				<charset>utf8</charset>
+			</encoder>
+		</appender>
+		
+		<appender name="flatfile"
+			class="ch.qos.logback.core.rolling.RollingFileAppender">
+			<file>${LOG_FILE}</file>
+			<rollingPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+				<fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+				<maxFileSize>100MB</maxFileSize>
+				<maxHistory>1</maxHistory>
+				<totalSizeCap>1GB</totalSizeCap>
+			</rollingPolicy>
+			<encoder>
+				<pattern>${CONSOLE_LOG_PATTERN}</pattern>
+				<charset>utf8</charset>
+			</encoder>
+		</appender>
+
+
+		<!-- Appender to log application logs in a JSON format -->
+		<appender name="logstash"
+			class="ch.qos.logback.core.rolling.RollingFileAppender">
+			<file>${JSON_FILE}</file>
+			<rollingPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+				<fileNamePattern>${BASE_FILE}.json.%d{yyyy-MM-dd}.%i.gz
+				</fileNamePattern>
+				<maxFileSize>100MB</maxFileSize>
+				<maxHistory>1</maxHistory>
+				<totalSizeCap>1GB</totalSizeCap>
+			</rollingPolicy>
+			<encoder
+				class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+				<providers>
+					<arguments />
+					<mdc>
+						<excludeMdcKeyName>X-B3-TraceId</excludeMdcKeyName>
+						<excludeMdcKeyName>X-B3-SpanId</excludeMdcKeyName>
+						<excludeMdcKeyName>X-B3-ParentSpanId</excludeMdcKeyName>
+						<excludeMdcKeyName>X-Span-Export</excludeMdcKeyName>
+					</mdc>
+					<stackTrace />
+					<timestamp>
+						<timeZone>UTC</timeZone>
+					</timestamp>
+
+					<pattern>
+						<pattern>
+							{
+							"severity": "%level",
+							"service": "${springAppName:-}",
+							"thread": "%thread",
+							"class": "%logger{40}",
+							"rest": "%message"
+							}
+						</pattern>
+					</pattern>
+				</providers>
+			</encoder>
+		</appender>
+
+		<appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+			<queueSize>1024</queueSize>
+			<appender-ref ref="logstash" />
+		</appender>
+
+		<root level="INFO">
+			<appender-ref ref="async" />
+			<appender-ref ref="flatfile" />
+			<appender-ref ref="console" />
+		</root>
+
+</configuration>
